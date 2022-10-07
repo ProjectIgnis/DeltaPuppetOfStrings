@@ -1,20 +1,16 @@
---聖装ストラビショップ
---Sacred Arms - Strabishop
+--ロードアームズ－セブンス・ランス
+--Road Arms - Sevens Lance
 --scripted by YoshiDuels
 local s,id=GetID()
 function s.initial_effect(c)
 	--equip
-	aux.AddEquipProcedure(c,0,s.eqfilter,s.eqlimit)
-	--atk up
+	aux.AddEquipProcedure(c,0,s.eqfilter,s.eqlimit,nil,nil,nil,s.condition)
+	--Increase ATK
 	local e1=Effect.CreateEffect(c)
 	e1:SetType(EFFECT_TYPE_EQUIP)
 	e1:SetCode(EFFECT_UPDATE_ATTACK)
-	e1:SetValue(100)
+	e1:SetValue(s.value)
 	c:RegisterEffect(e1)
-	local e2=e1:Clone()
-	e2:SetCode(EFFECT_UPDATE_DEFENSE)
-	e2:SetValue(1500)
-	c:RegisterEffect(e2)
 	--Cannot be destroyed by the opponent's trap effects
 	local e2=Effect.CreateEffect(c)
 	e2:SetType(EFFECT_TYPE_EQUIP)
@@ -23,12 +19,17 @@ function s.initial_effect(c)
 	c:RegisterEffect(e2)
 end
 function s.eqfilter(c)
-	return c:IsFaceup() and c:IsRace(RACE_PSYCHIC) and not c:IsMaximumModeSide()
+	return c:IsFaceup() and c:IsCode(160301001) and not c:IsMaximumModeSide()
 end
 function s.eqlimit(e,c)
     return c:IsFaceup()
 end
+function s.value(e,c)
+	return Duel.GetMatchingGroup(Card.IsMonster,e:GetHandlerPlayer(),LOCATION_GRAVE,0,nil):GetClassCount(Card.GetAttribute)*400
+end
+function s.condition(e,tp,eg,ep,ev,re,r,rp)
+	return not Duel.IsExistingMatchingCard(aux.FaceupFilter(Card.IsCode,160011050),tp,LOCATION_ONFIELD,0,1,nil)
+end
 function s.efilter(e,te)
 	return te:IsActiveType(TYPE_TRAP) and te:GetOwnerPlayer()~=e:GetHandlerPlayer()
 end
-

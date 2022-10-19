@@ -5,6 +5,112 @@ function GetID()
 	return self_table,self_code
 end
 
+function Auxiliary.NULL()
+end
+
+function Auxiliary.TRUE()
+	return true
+end
+
+function Auxiliary.FALSE()
+	return false
+end
+
+function Auxiliary.AND(...)
+	local funs={...}
+	return	function(...)
+				for _,f in ipairs(funs) do
+					if not f(...) then return false end
+				end
+				return true
+			end
+end
+
+function Auxiliary.OR(...)
+	local funs={...}
+	return	function(...)
+				for _,f in ipairs(funs) do
+					if f(...) then return true end
+				end
+				return false
+			end
+end
+
+function Auxiliary.tableAND(...)
+	local funs={...}
+	return	function(...)
+				local ret={}
+				for _,f in ipairs(funs) do
+					local res={f(...)}
+					for _,val in pairs(res) do
+						ret[_]=val and (ret[_]==nil or ret[_])
+					end
+				end
+				return ret
+			end
+end
+
+function Auxiliary.tableOR(...)
+	local funs={...}
+	return	function(...)
+				local ret={}
+				for _,f in ipairs(funs) do
+					local res={f(...)}
+					for _,val in pairs(res) do
+						ret[_]=val or not (ret[_]==nil or not ret[_])
+					end
+				end
+				return ret
+			end
+end
+
+function Auxiliary.NOT(f)
+	return	function(...)
+				return not f(...)
+			end
+end
+
+function Auxiliary.TargetEqualFunction(f,value,...)
+	local params={...}
+	return	function(effect,target)
+				return f(target,table.unpack(params))==value
+			end
+end
+
+function Auxiliary.TargetBoolFunction(f,...)
+	local params={...}
+	return	function(effect,target)
+				return f(target,table.unpack(params))
+			end
+end
+
+function Auxiliary.FilterEqualFunction(f,value,...)
+	local params={...}
+	return	function(target)
+				return f(target,table.unpack(params))==value
+			end
+end
+
+function Auxiliary.FilterBoolFunctionEx(f,value)
+	return	function(target,scard,sumtype,tp)
+				return f(target,value,scard,sumtype,tp)
+			end
+end
+
+function Auxiliary.FilterBoolFunctionEx2(f,...)
+	local params={...}
+	return	function(target,scard,sumtype,tp)
+				return f(target,scard,sumtype,tp,table.unpack(params))
+			end
+end
+
+function Auxiliary.FilterBoolFunction(f,...)
+	local params={...}
+	return	function(target)
+				return f(target,table.unpack(params))
+			end
+end
+
 --Multi purpose token
 if not c946 then
 	c946 = {}
@@ -93,73 +199,33 @@ function Auxiliary.CostWithReplace(base,replacecode,extracon,alwaysexecute)
 end
 
 
-function Card.IsMonster(c)
-	return c:IsType(TYPE_MONSTER)
+Card.IsMonster=aux.FilterBoolFunction(Card.IsType,TYPE_MONSTER)
+Card.IsSpell=aux.FilterBoolFunction(Card.IsType,TYPE_SPELL)
+Card.IsTrap=aux.FilterBoolFunction(Card.IsType,TYPE_TRAP)
+Card.IsSpellTrap=aux.FilterBoolFunction(Card.IsType,TYPE_SPELL|TYPE_TRAP)
+
+function Card.IsExactType(c,type)
+	return c:GetType()&type==type
 end
 
-function Card.IsSpell(c)
-	return c:IsType(TYPE_SPELL)
+local function make_exact_type_check(type)
+	return aux.FilterBoolFunction(Card.IsExactType,type)
 end
 
-function Card.IsTrap(c)
-	return c:IsType(TYPE_TRAP)
-end
+Card.IsNormalSpell=make_exact_type_check(TYPE_SPELL)
+Card.IsQuickPlaySpell=make_exact_type_check(TYPE_SPELL|TYPE_QUICKPLAY)
+Card.IsContinuousSpell=make_exact_type_check(TYPE_SPELL|TYPE_CONTINUOUS)
+Card.IsEquipSpell=make_exact_type_check(TYPE_SPELL|TYPE_EQUIP)
+Card.IsFieldSpell=make_exact_type_check(TYPE_SPELL|TYPE_FIELD)
+Card.IsRitualSpell=make_exact_type_check(TYPE_SPELL|TYPE_RITUAL)
+Card.IsLinkSpell=make_exact_type_check(TYPE_SPELL|TYPE_LINK)
 
-function Card.IsSpellTrap(c)
-	return c:IsType(TYPE_SPELL|TYPE_TRAP)
-end
+Card.IsNormalTrap=make_exact_type_check(TYPE_TRAP)
+Card.IsContinuousTrap=make_exact_type_check(TYPE_TRAP|TYPE_CONTINUOUS)
+Card.IsCounterTrap=make_exact_type_check(TYPE_TRAP|TYPE_COUNTER)
 
-function Card.IsNormalSpell(c)
-	return c:GetType()==TYPE_SPELL
-end
-
-function Card.IsQuickPlaySpell(c)
-	return c:IsType(TYPE_QUICKPLAY) and c:IsSpell()
-end
-
-function Card.IsContinuousSpell(c)
-	return c:IsType(TYPE_CONTINUOUS) and c:IsSpell()
-end
-
-function Card.IsEquipSpell(c)
-	return c:IsType(TYPE_EQUIP) and c:IsSpell()
-end
-
-function Card.IsFieldSpell(c)
-	return c:IsType(TYPE_FIELD) and c:IsSpell()
-end
-
-function Card.IsNormalTrap(c)
-	return c:GetType()==TYPE_TRAP
-end
-
-function Card.IsContinuousTrap(c)
-	return c:IsType(TYPE_CONTINUOUS) and c:IsTrap()
-end
-
-function Card.IsCounterTrap(c)
-	return c:IsType(TYPE_COUNTER) and c:IsTrap()
-end
-
-function Card.IsRitualMonster(c)
-	local tp=TYPE_RITUAL+TYPE_MONSTER
-	return c:GetType() & tp == tp
-end
-
-function Card.IsRitualSpell(c)
-	local tp=TYPE_RITUAL+TYPE_SPELL
-	return c:GetType() & tp == tp
-end
-
-function Card.IsLinkMonster(c)
-	local tp=TYPE_LINK+TYPE_MONSTER
-	return c:GetType() & tp == tp
-end
-
-function Card.IsLinkSpell(c)
-	local tp=TYPE_LINK+TYPE_SPELL
-	return c:GetType() & tp == tp
-end
+Card.IsRitualMonster=make_exact_type_check(TYPE_MONSTER|TYPE_RITUAL)
+Card.IsLinkMonster=make_exact_type_check(TYPE_MONSTER|TYPE_LINK)
 
 function Card.IsNonEffectMonster(c)
 	return c:IsMonster() and not c:IsType(TYPE_EFFECT)
@@ -668,117 +734,11 @@ function Auxiliary.Next(g)
 end
 Group.Iter=Auxiliary.Next
 
-function Auxiliary.NULL()
-end
-
-function Auxiliary.TRUE()
-	return true
-end
-
-function Auxiliary.FALSE()
-	return false
-end
-
-function Auxiliary.AND(...)
-	local funs={...}
-	return	function(...)
-				for _,f in ipairs(funs) do
-					if not f(...) then return false end
-				end
-				return true
-			end
-end
-
-function Auxiliary.OR(...)
-	local funs={...}
-	return	function(...)
-				for _,f in ipairs(funs) do
-					if f(...) then return true end
-				end
-				return false
-			end
-end
-
-function Auxiliary.tableAND(...)
-	local funs={...}
-	return	function(...)
-				local ret={}
-				for _,f in ipairs(funs) do
-					local res={f(...)}
-					for _,val in pairs(res) do
-						ret[_]=val and (ret[_]==nil or ret[_])
-					end
-				end
-				return ret
-			end
-end
-
-function Auxiliary.tableOR(...)
-	local funs={...}
-	return	function(...)
-				local ret={}
-				for _,f in ipairs(funs) do
-					local res={f(...)}
-					for _,val in pairs(res) do
-						ret[_]=val or not (ret[_]==nil or not ret[_])
-					end
-				end
-				return ret
-			end
-end
-
-function Auxiliary.NOT(f)
-	return	function(...)
-				return not f(...)
-			end
-end
-
-function Auxiliary.TargetEqualFunction(f,value,...)
-	local params={...}
-	return	function(effect,target)
-				return f(target,table.unpack(params))==value
-			end
-end
-
-function Auxiliary.TargetBoolFunction(f,...)
-	local params={...}
-	return	function(effect,target)
-				return f(target,table.unpack(params))
-			end
-end
-
-function Auxiliary.FilterEqualFunction(f,value,...)
-	local params={...}
-	return	function(target)
-				return f(target,table.unpack(params))==value
-			end
-end
-
 --used for Material Types Filter Bool (works for IsRace, IsAttribute, IsType)
 function Auxiliary.FilterSummonCode(...)
 	local params={...}
 	return	function(c,scard,sumtype,tp)
 				return c:IsSummonCode(scard,sumtype,tp,table.unpack(params))
-			end
-end
-
-function Auxiliary.FilterBoolFunctionEx(f,value)
-	return	function(target,scard,sumtype,tp)
-				return f(target,value,scard,sumtype,tp)
-			end
-end
-
-function Auxiliary.FilterBoolFunctionEx2(f,...)
-	local params={...}
-	return	function(target,scard,sumtype,tp)
-				return f(target,scard,sumtype,tp,table.unpack(params))
-			end
-end
-
-function Auxiliary.FilterBoolFunction(f,...)
-	local params={...}
-	return	function(target)
-				return f(target,table.unpack(params))
 			end
 end
 

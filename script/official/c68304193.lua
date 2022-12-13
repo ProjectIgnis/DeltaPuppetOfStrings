@@ -1,9 +1,9 @@
--- クシャトリラ・オーガ
--- Kashtira Ogre
+-- クシャトリラ・ユニコーン
+-- Kshatri-La Unicorn
 -- Scripted by Hatter
 local s,id=GetID()
 function s.initial_effect(c)
-	-- Special Summon itself from the hand if you control no monsters
+	-- Special Summon this card
 	local e1=Effect.CreateEffect(c)
 	e1:SetType(EFFECT_TYPE_FIELD)
 	e1:SetProperty(EFFECT_FLAG_UNCOPYABLE)
@@ -11,7 +11,7 @@ function s.initial_effect(c)
 	e1:SetRange(LOCATION_HAND)
 	e1:SetCondition(s.spcon)
 	c:RegisterEffect(e1)
-	-- Add 1 "Kashtira" Trap from the Deck to the hand
+	-- Search 1 "Kshatri-la" Spell
 	local e2=Effect.CreateEffect(c)
 	e2:SetDescription(aux.Stringid(id,0))
 	e2:SetCategory(CATEGORY_TOHAND+CATEGORY_SEARCH)
@@ -21,7 +21,7 @@ function s.initial_effect(c)
 	e2:SetTarget(s.thtg)
 	e2:SetOperation(s.thop)
 	c:RegisterEffect(e2)
-	-- Excavate the opponent's Deck and banish 1 card, face-down
+	-- Banish 1 card face-down
 	local e3=Effect.CreateEffect(c)
 	e3:SetDescription(aux.Stringid(id,1))
 	e3:SetCategory(CATEGORY_REMOVE)
@@ -46,7 +46,7 @@ function s.spcon(e,c)
 	return Duel.GetFieldGroupCount(tp,LOCATION_MZONE,0,nil)==0 and Duel.GetLocationCount(tp,LOCATION_MZONE)>0
 end
 function s.thfilter(c)
-	return c:IsSetCard(SET_KASHTIRA) and c:IsTrap() and c:IsAbleToHand()
+	return c:IsSetCard(SET_KASHTIRA) and c:IsSpell() and c:IsAbleToHand()
 end
 function s.thtg(e,tp,eg,ep,ev,re,r,rp,chk)
 	if chk==0 then return Duel.IsExistingMatchingCard(s.thfilter,tp,LOCATION_DECK,0,1,nil) end
@@ -61,20 +61,20 @@ function s.thop(e,tp,eg,ep,ev,re,r,rp)
 	end
 end
 function s.rmtg(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return Duel.GetFieldGroupCount(tp,0,LOCATION_DECK)>0 and Duel.IsPlayerCanRemove(tp) end
-	Duel.SetOperationInfo(0,CATEGORY_REMOVE,nil,1,1-tp,LOCATION_DECK)
+	if chk==0 then return Duel.GetFieldGroupCount(tp,0,LOCATION_EXTRA)>0 and Duel.IsPlayerCanRemove(tp) end
+	Duel.SetOperationInfo(0,CATEGORY_REMOVE,nil,1,1-tp,LOCATION_EXTRA)
 end
 function s.rmop(e,tp,eg,ep,ev,re,r,rp)
-	if Duel.GetFieldGroupCount(tp,0,LOCATION_DECK)==0 then return end
-	Duel.ConfirmDecktop(1-tp,5)
-	local g=Duel.GetDecktopGroup(1-tp,5)
+	local g=Duel.GetFieldGroup(tp,0,LOCATION_EXTRA)
+	if #g<1 then return end
+	Duel.ConfirmCards(tp,g)
 	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_REMOVE)
 	local sg=g:FilterSelect(tp,Card.IsAbleToRemove,1,1,nil,tp,POS_FACEDOWN)
 	if #sg>0 then
-		Duel.DisableShuffleCheck(true)
 		Duel.Remove(sg,POS_FACEDOWN,REASON_EFFECT)
 	end
+	Duel.ShuffleExtra(1-tp)
 end
 function s.rmeffcon(e,tp,eg,ep,ev,re,r,rp)
-	return ep==1-tp and re:IsMonsterEffect()
+	return ep==1-tp and re:IsActiveType(TYPE_MONSTER)
 end

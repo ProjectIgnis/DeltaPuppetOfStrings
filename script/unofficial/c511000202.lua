@@ -1,0 +1,36 @@
+--トーテムポール (Anime)
+--Totem Pole (Anime)
+local s,id=GetID()
+function s.initial_effect(c)
+	--Activate
+	local e1=Effect.CreateEffect(c)
+	e1:SetType(EFFECT_TYPE_ACTIVATE)
+	e1:SetCode(EVENT_FREE_CHAIN)
+	c:RegisterEffect(e1)
+	--Negate attack
+	local e2=Effect.CreateEffect(c)
+	e2:SetDescription(aux.Stringid(id,0))
+	e2:SetType(EFFECT_TYPE_QUICK_O)
+	e2:SetCode(EVENT_FREE_CHAIN)
+	e2:SetRange(LOCATION_SZONE)
+	e2:SetCondition(s.condition)
+	e2:SetOperation(s.operation)
+	c:RegisterEffect(e2)
+	--Destroy this card
+	local e3=Effect.CreateEffect(c)
+	e3:SetType(EFFECT_TYPE_SINGLE)
+	e3:SetProperty(EFFECT_FLAG_SINGLE_RANGE)
+	e3:SetCode(EFFECT_SELF_DESTROY)
+	e3:SetRange(LOCATION_SZONE)
+	e3:SetCondition(function(e) return e:GetHandler():GetFlagEffect(id)==3 end)
+	c:RegisterEffect(e3)
+end
+function s.condition(e,tp,eg,ep,ev,re,r,rp)
+	local a=Duel.GetAttacker()
+	return a and a:IsControler(1-tp) and Duel.GetAttackTarget()
+		and not e:GetHandler():IsStatus(STATUS_CHAINING)
+end
+function s.operation(e,tp,eg,ep,ev,re,r,rp))
+	Duel.NegateAttack()
+	e:GetHandler():RegisterFlagEffect(id,RESET_EVENT|RESETS_STANDARD,0,0)
+end

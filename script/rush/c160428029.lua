@@ -1,48 +1,54 @@
---ジョインテック・トスケラトプス
---Jointech Tossceratops
---Scripted by YoshiDuels
+--ＣＡＮ－Ｓｐ：Ｄ
+--CAN - Sp:D
+--scripted by Naim
 local s,id=GetID()
 function s.initial_effect(c)
-	--Toss a coin a draw
+	--Increase ATK and prevent Trap cards activation
 	local e1=Effect.CreateEffect(c)
-	e1:SetDescription(aux.Stringid(id,0))
-	e1:SetCategory(CATEGORY_COIN+CATEGORY_ATKCHANGE+CATEGORY_POSITION)
+	e1:SetCategory(CATEGORY_ATKCHANGE)
 	e1:SetType(EFFECT_TYPE_IGNITION)
 	e1:SetRange(LOCATION_MZONE)
 	e1:SetCountLimit(1)
 	e1:SetCondition(s.condition)
-	e1:SetTarget(s.target)
+	e1:SetCost(s.cost)
 	e1:SetOperation(s.operation)
 	c:RegisterEffect(e1)
 end
-s.toss_coin=true
-function s.condition(e,tp,eg,ep,ev,re,r,rp)
-	return e:GetHandler():IsPosition(POS_FACEUP_ATTACK)
+function s.psyfilter(c)
+	return c:IsFaceup() and (c:IsRace(RACE_PSYCHIC) or c:IsRace(RACE_OMEGAPSYCHIC))
 end
-function s.target(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return true end
-	Duel.SetOperationInfo(0,CATEGORY_COIN,nil,0,tp,1)
+function s.condition(e,tp,eg,ep,ev,re,r,rp)
+	return Duel.IsExistingMatchingCard(s.psyfilter,tp,LOCATION_MZONE,0,1,e:GetHandler())
+end
+function s.cost(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.IsPlayerCanDiscardDeckAsCost(tp,1) end
 end
 function s.operation(e,tp,eg,ep,ev,re,r,rp)
+	--Requirement
+	if Duel.DiscardDeck(tp,1,REASON_COST)==0 then return end
 	--Effect
-	local c=e:GetHandler()
-	local res=Duel.TossCoin(tp,1)
-	if not (c:IsRelateToEffect(e) and c:IsFaceup()) then return end
-	if res==COIN_TAILS then
-		Duel.ChangePosition(c,POS_FACEUP_DEFENSE)
-	elseif res==COIN_HEADS then
+	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATKDEF)
+	local g=Duel.SelectMatchingCard(tp,aux.FilterMaximumSideFunctionEx(Card.IsFaceup),tp,LOCATION_MZONE,0,1,1,nil)
+	if #g>0 then
+		Duel.HintSelection(g,true)
+		local c=e:GetHandler()
+		local tc=g:GetFirst()
+		--Increase ATK by 200
 		local e1=Effect.CreateEffect(c)
 		e1:SetType(EFFECT_TYPE_SINGLE)
 		e1:SetCode(EFFECT_UPDATE_ATTACK)
-		e1:SetValue(1500)
+		e1:SetProperty(EFFECT_FLAG_SINGLE_RANGE)
+		e1:SetRange(LOCATION_MZONE)
+		e1:SetValue(200)
 		e1:SetReset(RESET_EVENT+RESETS_STANDARD+RESET_PHASE+PHASE_END)
-		c:RegisterEffect(e1)
+		tc:RegisterEffectRush(e1)
+		--Prevent Trap cards activations
 		local e2=Effect.CreateEffect(c)
 		e2:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_CONTINUOUS)
 		e2:SetCode(EVENT_ATTACK_ANNOUNCE)
 		e2:SetOperation(s.atkop)
 		e2:SetReset(RESET_EVENT+RESETS_STANDARD+RESET_PHASE+PHASE_END)
-		c:RegisterEffect(e2)
+		tc:RegisterEffect(e2)
 	end
 end
 function s.atkop(e,tp,eg,ep,ev,re,r,rp)
@@ -57,7 +63,7 @@ function s.atkop(e,tp,eg,ep,ev,re,r,rp)
 	Duel.RegisterEffect(e1,tp)
 end
 function s.aclimit(e,re,tp)
-	return re:IsHasType(EFFECT_TYPE_ACTIVATE) and re:GetHandler():IsTrap()
+	return re:IsHasType(EFFECT_TYPE_ACTIVATE) and re:IsActiveType(TYPE_TRAP)
 end
 function s.actcon(e)
 	return Duel.GetCurrentPhase()~=PHASE_DAMAGE

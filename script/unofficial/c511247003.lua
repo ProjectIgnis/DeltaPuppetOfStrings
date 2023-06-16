@@ -1,6 +1,6 @@
---フォーチュンレディ・ライティー (Anime)
---Fortune Lady Light (Anime)
---fixed by MLD & Larry126
+--フォーチュンレディ・ウォーテリー (Anime)
+--Fortune Lady Water (Anime)
+--fixed by MLD
 local s,id=GetID()
 function s.initial_effect(c)
 	--This card's ATK/DEF become its Level x 200
@@ -24,20 +24,26 @@ function s.initial_effect(c)
 	e3:SetCondition(s.lvcon)
 	e3:SetOperation(s.lvop)
 	c:RegisterEffect(e3)
-	--Special Summon 1 "Fortune Lady" monster from your Deck
+	--Draw for each "Fortune Lady" you control
 	local e4=Effect.CreateEffect(c)
 	e4:SetDescription(aux.Stringid(id,1))
-	e4:SetCategory(CATEGORY_SPECIAL_SUMMON)
-	e4:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_O)
-	e4:SetCode(EVENT_LEAVE_FIELD)
-	e4:SetCondition(s.spcon)
-	e4:SetTarget(s.sptg)
-	e4:SetOperation(s.spop)
+	e4:SetCategory(CATEGORY_DRAW)
+	e4:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_F)
+	e4:SetProperty(EFFECT_FLAG_PLAYER_TARGET)
+	e4:SetCode(EVENT_SUMMON_SUCCESS)
+	e4:SetTarget(s.drtg)
+	e4:SetOperation(s.drop)
 	c:RegisterEffect(e4)
+	local e5=e4:Clone()
+	e5:SetCode(EVENT_SPSUMMON_SUCCESS)
+	c:RegisterEffect(e5)
+	local e6=e4:Clone()
+	e6:SetCode(EVENT_FLIP_SUMMON_SUCCESS)
+	c:RegisterEffect(e6)
 end
 s.listed_series={SET_FORTUNE_LADY}
 function s.value(e,c)
-	return c:GetLevel()*200
+	return c:GetLevel()*300
 end
 function s.lvcon(e,tp,eg,ep,ev,re,r,rp)
 	return Duel.IsTurnPlayer(tp) and e:GetHandler():IsLevelAbove(1) and e:GetHandler():IsLevelBelow(11)
@@ -52,24 +58,16 @@ function s.lvop(e,tp,eg,ep,ev,re,r,rp)
 	e1:SetReset(RESET_EVENT|RESETS_STANDARD_DISABLE)
 	c:RegisterEffect(e1)
 end
-function s.spcon(e,tp,eg,ep,ev,re,r,rp)
-	local c=e:GetHandler()
-	return c:IsPreviousControler(tp) and not c:IsLocation(LOCATION_DECK) 
-		and c:IsPreviousPosition(POS_FACEUP)
+function s.filter(c)
+	return c:IsFaceup() and c:IsSetCard(SET_FORTUNE_LADY)
 end
-function s.spfilter(c,e,tp)
-	return c:IsSetCard(SET_FORTUNE_LADY) and c:IsCanBeSpecialSummoned(e,0,tp,false,false)
+function s.drtg(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return true end
+	Duel.SetTargetPlayer(tp)
+	Duel.SetOperationInfo(0,CATEGORY_DRAW,nil,0,tp,Duel.GetMatchingGroupCount(s.filter,tp,LOCATION_MZONE,0,nil))
 end
-function s.sptg(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return Duel.GetLocationCount(tp,LOCATION_MZONE)>0
-		and Duel.IsExistingMatchingCard(s.spfilter,tp,LOCATION_DECK,0,1,nil,e,tp) end
-	Duel.SetOperationInfo(0,CATEGORY_SPECIAL_SUMMON,nil,1,tp,LOCATION_DECK)
-end
-function s.spop(e,tp,eg,ep,ev,re,r,rp)
-	if Duel.GetLocationCount(tp,LOCATION_MZONE)<=0 then return end
-	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_SPSUMMON)
-	local g=Duel.SelectMatchingCard(tp,s.spfilter,tp,LOCATION_DECK,0,1,1,nil,e,tp)
-	if #g>0 then
-		Duel.SpecialSummon(g,0,tp,tp,false,false,POS_FACEUP)
-	end
+function s.drop(e,tp,eg,ep,ev,re,r,rp)
+	local p=Duel.GetChainInfo(0,CHAININFO_TARGET_PLAYER)
+	local ct=Duel.GetMatchingGroupCount(s.filter,tp,LOCATION_MZONE,0,nil)
+	Duel.Draw(p,ct,REASON_EFFECT)
 end

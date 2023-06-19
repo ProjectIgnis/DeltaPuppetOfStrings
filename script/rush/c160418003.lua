@@ -1,6 +1,5 @@
---閃光のバリア－シャイニング・フォース－
---Radiant Mirror Force (Rush)
---scripted by YoshiDuels
+--聖なるバリア－ミラーフォース－
+--Mirror Force (Rush)
 local s,id=GetID()
 function s.initial_effect(c)
 	--Activate
@@ -13,11 +12,8 @@ function s.initial_effect(c)
 	e1:SetOperation(s.activate)
 	c:RegisterEffect(e1)
 end
-function s.cfilter(c)
-	return c:IsAttackPos() and not c:IsMaximumModeSide()
-end
 function s.condition(e,tp,eg,ep,ev,re,r,rp)
-	return tp~=Duel.GetTurnPlayer() and Duel.IsExistingMatchingCard(s.cfilter,tp,0,LOCATION_MZONE,3,nil)
+	return tp~=Duel.GetTurnPlayer()
 end
 function s.filter(c)
 	return c:IsAttackPos() and c:IsNotMaximumModeSide()
@@ -33,4 +29,3 @@ function s.activate(e,tp,eg,ep,ev,re,r,rp)
 		Duel.Destroy(g,REASON_EFFECT)
 	end
 end
-

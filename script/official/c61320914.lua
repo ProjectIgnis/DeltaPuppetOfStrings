@@ -1,9 +1,9 @@
---Ｖ・ＨＥＲＯ ポイズナー
---Vision HERO Poisoner
---Scripted by AlphaKretin
+--Ｖ・ＨＥＲＯ ミニマム・レイ
+--Vision HERO Minimum Ray
+--Manga version by Larry126, OCG updates by AlphaKretin
 local s,id=GetID()
 function s.initial_effect(c)
-	--Place this card in the S/T Zone as a Continuous Trap
+	--Place this card in the S/T Zone as a Continuous Trap 
 	local e1=Effect.CreateEffect(c)
 	e1:SetDescription(aux.Stringid(id,0))
 	e1:SetType(EFFECT_TYPE_FIELD+EFFECT_TYPE_TRIGGER_O)
@@ -29,17 +29,17 @@ function s.initial_effect(c)
 	e2:SetTarget(s.sptg)
 	e2:SetOperation(s.spop)
 	c:RegisterEffect(e2)
-	--Halve the ATK of 1 monster on the field
+	--Destroy 1 level 4 or lower monster your opponent controls
 	local e3=Effect.CreateEffect(c)
 	e3:SetDescription(aux.Stringid(id,2))
-	e3:SetCategory(CATEGORY_ATKCHANGE)
+	e3:SetCategory(CATEGORY_DESTROY)
 	e3:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_O)
 	e3:SetCode(EVENT_SPSUMMON_SUCCESS)
 	e3:SetProperty(EFFECT_FLAG_DELAY)
 	e3:SetCountLimit(1,{id,2})
-	e3:SetCondition(s.atkcon)
-	e3:SetTarget(s.atktg)
-	e3:SetOperation(s.atkop)
+	e3:SetCondition(s.descon)
+	e3:SetTarget(s.destg)
+	e3:SetOperation(s.desop)
 	c:RegisterEffect(e3)
 end
 s.listed_series={SET_HERO}
@@ -59,7 +59,7 @@ function s.recop(e,tp,eg,ep,ev,re,r,rp)
 	e1:SetType(EFFECT_TYPE_SINGLE)
 	e1:SetProperty(EFFECT_FLAG_CANNOT_DISABLE)
 	e1:SetReset(RESET_EVENT+RESETS_STANDARD-RESET_TURN_SET)
-	e1:SetValue(TYPE_TRAPTYPE_CONTINUOUS)
+	e1:SetValue(TYPE_TRAP+TYPE_CONTINUOUS)
 	c:RegisterEffect(e1)
 end
 function s.spcon(e,tp,eg,ep,ev,re,r,rp)
@@ -83,25 +83,18 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp,c)
 		Duel.SpecialSummon(e:GetHandler(),0,tp,tp,false,false,POS_FACEUP)
 	end
 end
-function s.atkfilter(c)
-	return c:IsFaceup() and c:GetAttack()>0
-end
-function s.atkcon(e,tp,eg,ep,ev,re,r,rp)
+function s.descon(e,tp,eg,ep,ev,re,r,rp)
 	return e:GetHandler():IsPreviousLocation(LOCATION_SZONE)
 end
-function s.atktg(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return Duel.IsExistingMatchingCard(s.atkfilter,tp,LOCATION_MZONE,LOCATION_MZONE,1,nil) end
-	Duel.SetOperationInfo(0,CATEGORY_ATKCHANGE,nil,1,0,0)
+function s.destg(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.IsExistingMatchingCard(aux.FaceupFilter(Card.IsLevelBelow,4),tp,0,LOCATION_MZONE,1,nil) end
+	local g=Duel.GetMatchingGroup(aux.FaceupFilter(Card.IsLevelBelow,4),tp,0,LOCATION_MZONE,nil)
+	Duel.SetOperationInfo(0,CATEGORY_DESTROY,g,1,0,0)
 end
-function s.atkop(e,tp,eg,ep,ev,re,r,rp)
-	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATKDEF)
-	local tc=Duel.SelectMatchingCard(tp,s.atkfilter,tp,LOCATION_MZONE,LOCATION_MZONE,1,1,nil):GetFirst()
-	if tc then
-		local e1=Effect.CreateEffect(e:GetHandler())
-		e1:SetType(EFFECT_TYPE_SINGLE)
-		e1:SetCode(EFFECT_SET_ATTACK_FINAL)
-		e1:SetValue(tc:GetAttack()//2)
-		e1:SetReset(RESET_EVENT|RESETS_STANDARD)
-		tc:RegisterEffect(e1)
+function s.desop(e,tp,eg,ep,ev,re,r,rp)
+	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_DESTROY)
+	local g=Duel.SelectMatchingCard(tp,aux.FaceupFilter(Card.IsLevelBelow,4),tp,0,LOCATION_MZONE,1,1,nil)
+	if #g>0 then
+		Duel.Destroy(g,REASON_EFFECT)
 	end
 end

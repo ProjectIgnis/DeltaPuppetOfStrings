@@ -1,6 +1,6 @@
---Ｖ・ＨＥＲＯ ポイズナー
---Vision HERO Poisoner
---Scripted by AlphaKretin
+--Ｖ・ＨＥＲＯ インクリース
+--Vision HERO Increase
+--scripted by Larry126
 local s,id=GetID()
 function s.initial_effect(c)
 	--Place this card in the S/T Zone as a Continuous Trap
@@ -29,22 +29,22 @@ function s.initial_effect(c)
 	e2:SetTarget(s.sptg)
 	e2:SetOperation(s.spop)
 	c:RegisterEffect(e2)
-	--Halve the ATK of 1 monster on the field
+	--Special summon from 1 "Vision Hero" monster from the Deck
 	local e3=Effect.CreateEffect(c)
 	e3:SetDescription(aux.Stringid(id,2))
-	e3:SetCategory(CATEGORY_ATKCHANGE)
+	e3:SetCategory(CATEGORY_SPECIAL_SUMMON)
 	e3:SetType(EFFECT_TYPE_SINGLE+EFFECT_TYPE_TRIGGER_O)
+	e3:SetProperty(EFFECT_FLAG_DAMAGE_STEP+EFFECT_FLAG_DELAY)
 	e3:SetCode(EVENT_SPSUMMON_SUCCESS)
-	e3:SetProperty(EFFECT_FLAG_DELAY)
 	e3:SetCountLimit(1,{id,2})
-	e3:SetCondition(s.atkcon)
-	e3:SetTarget(s.atktg)
-	e3:SetOperation(s.atkop)
+	e3:SetCondition(s.scon)
+	e3:SetTarget(s.stg)
+	e3:SetOperation(s.sop)
 	c:RegisterEffect(e3)
 end
-s.listed_series={SET_HERO}
+s.listed_series={SET_HERO,SET_VISION_HERO}
 function s.recon(e,tp,eg,ep,ev,re,r,rp)
-	return ep==tp and (r&REASON_BATTLE+REASON_EFFECT)~=0
+	return ep==tp and r&(REASON_BATTLE+REASON_EFFECT)~=0
 end
 function s.rectg(e,tp,eg,ep,ev,re,r,rp,chk)
 	if chk==0 then return Duel.GetLocationCount(tp,LOCATION_SZONE)>0 end
@@ -53,14 +53,15 @@ end
 function s.recop(e,tp,eg,ep,ev,re,r,rp)
 	if not e:GetHandler():IsRelateToEffect(e) then return end
 	local c=e:GetHandler()
-	Duel.MoveToField(c,tp,tp,LOCATION_SZONE,POS_FACEUP,true)
-	local e1=Effect.CreateEffect(c)
-	e1:SetCode(EFFECT_CHANGE_TYPE)
-	e1:SetType(EFFECT_TYPE_SINGLE)
-	e1:SetProperty(EFFECT_FLAG_CANNOT_DISABLE)
-	e1:SetReset(RESET_EVENT+RESETS_STANDARD-RESET_TURN_SET)
-	e1:SetValue(TYPE_TRAPTYPE_CONTINUOUS)
-	c:RegisterEffect(e1)
+	if Duel.MoveToField(c,tp,tp,LOCATION_SZONE,POS_FACEUP,true) then
+		local e1=Effect.CreateEffect(c)
+		e1:SetCode(EFFECT_CHANGE_TYPE)
+		e1:SetType(EFFECT_TYPE_SINGLE)
+		e1:SetProperty(EFFECT_FLAG_CANNOT_DISABLE)
+		e1:SetReset(RESET_EVENT+RESETS_STANDARD-RESET_TURN_SET)
+		e1:SetValue(TYPE_TRAP+TYPE_CONTINUOUS)
+		c:RegisterEffect(e1)
+	end
 end
 function s.spcon(e,tp,eg,ep,ev,re,r,rp)
 	return Duel.IsMainPhase() and e:GetHandler():IsContinuousTrap()
@@ -83,25 +84,22 @@ function s.spop(e,tp,eg,ep,ev,re,r,rp,c)
 		Duel.SpecialSummon(e:GetHandler(),0,tp,tp,false,false,POS_FACEUP)
 	end
 end
-function s.atkfilter(c)
-	return c:IsFaceup() and c:GetAttack()>0
-end
-function s.atkcon(e,tp,eg,ep,ev,re,r,rp)
+function s.scon(e,tp,eg,ep,ev,re,r,rp)
 	return e:GetHandler():IsPreviousLocation(LOCATION_SZONE)
 end
-function s.atktg(e,tp,eg,ep,ev,re,r,rp,chk)
-	if chk==0 then return Duel.IsExistingMatchingCard(s.atkfilter,tp,LOCATION_MZONE,LOCATION_MZONE,1,nil) end
-	Duel.SetOperationInfo(0,CATEGORY_ATKCHANGE,nil,1,0,0)
+function s.filter(c,e,tp)
+	return c:IsSetCard(SET_VISION_HERO) and c:IsLevelBelow(4) and c:IsCanBeSpecialSummoned(e,0,tp,false,false)
 end
-function s.atkop(e,tp,eg,ep,ev,re,r,rp)
-	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_ATKDEF)
-	local tc=Duel.SelectMatchingCard(tp,s.atkfilter,tp,LOCATION_MZONE,LOCATION_MZONE,1,1,nil):GetFirst()
-	if tc then
-		local e1=Effect.CreateEffect(e:GetHandler())
-		e1:SetType(EFFECT_TYPE_SINGLE)
-		e1:SetCode(EFFECT_SET_ATTACK_FINAL)
-		e1:SetValue(tc:GetAttack()//2)
-		e1:SetReset(RESET_EVENT|RESETS_STANDARD)
-		tc:RegisterEffect(e1)
+function s.stg(e,tp,eg,ep,ev,re,r,rp,chk)
+	if chk==0 then return Duel.GetLocationCount(tp,LOCATION_MZONE)>0
+		and Duel.IsExistingMatchingCard(s.filter,tp,LOCATION_DECK,0,1,nil,e,tp) end
+	Duel.SetOperationInfo(0,CATEGORY_SPECIAL_SUMMON,nil,1,tp,LOCATION_DECK)
+end
+function s.sop(e,tp,eg,ep,ev,re,r,rp)
+	if Duel.GetLocationCount(tp,LOCATION_MZONE)<=0 then return end
+	Duel.Hint(HINT_SELECTMSG,tp,HINTMSG_SPSUMMON)
+	local g=Duel.SelectMatchingCard(tp,s.filter,tp,LOCATION_DECK,0,1,1,nil,e,tp)
+	if #g>0 then
+		Duel.SpecialSummon(g,0,tp,tp,false,false,POS_FACEUP)
 	end
 end
